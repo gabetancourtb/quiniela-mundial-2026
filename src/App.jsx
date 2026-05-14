@@ -347,17 +347,23 @@ export default function App() {
                 const real=results[m.id];
                 const pts=real&&has?calcPoints(pick,real):null;
                 return(
-                  <div key={m.id} style={{background:pts===5?"rgba(255,214,10,0.05)":pts===3?"rgba(6,214,160,0.04)":"rgba(255,255,255,0.03)",border:`1px solid ${pts===5?"rgba(255,214,10,0.22)":pts===3?"rgba(6,214,160,0.18)":"rgba(255,255,255,0.07)"}`,borderRadius:10,padding:"9px 12px",minWidth:0}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:7,gap:6}}>
-                      <span style={{fontSize:10,color:"rgba(255,255,255,0.28)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>#{m.id} · Gr.{m.group} · {m.date.slice(5).replace("-","/")} · {m.venue}</span>
+                  <div key={m.id} style={{background:pts===5?"rgba(255,214,10,0.05)":pts===3?"rgba(6,214,160,0.04)":"rgba(255,255,255,0.03)",border:`1px solid ${pts===5?"rgba(255,214,10,0.22)":pts===3?"rgba(6,214,160,0.18)":"rgba(255,255,255,0.07)"}`,borderRadius:10,padding:"9px 12px"}}>
+                    {/* metadata */}
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:6}}>
+                      <span style={{fontSize:10,color:"rgba(255,255,255,0.28)"}}>#{m.id} · Gr.{m.group} · {m.date.slice(5).replace("-","/")} · {m.venue}</span>
                       {pts!==null&&<Pts pts={pts}/>}
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",alignItems:"center",gap:6}}>
-                      <div style={{textAlign:"right",fontWeight:600,fontSize:11,lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</div>
-                      <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-                        <SBox v={has?pick[0]:null}/><span style={{color:"rgba(255,255,255,0.22)",fontFamily:"'Bebas Neue'",fontSize:15}}>:</span><SBox v={has?pick[1]:null}/>
-                      </div>
-                      <div style={{textAlign:"left",fontWeight:600,fontSize:11,lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</div>
+                    {/* home */}
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                      <span style={{fontWeight:700,fontSize:12}}>{m.home}</span>
+                      <SBox v={has?pick[0]:null}/>
+                    </div>
+                    {/* divider */}
+                    <div style={{borderTop:"1px solid rgba(255,255,255,0.06)",margin:"4px 0"}}/>
+                    {/* away */}
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <span style={{fontWeight:700,fontSize:12}}>{m.away}</span>
+                      <SBox v={has?pick[1]:null}/>
                     </div>
                     {real&&<div style={{textAlign:"center",marginTop:6,fontSize:11,color:"rgba(255,255,255,0.38)"}}>Real: <strong style={{color:"rgba(255,255,255,0.6)"}}>{real[0]}–{real[1]}</strong></div>}
                   </div>
@@ -382,22 +388,26 @@ export default function App() {
                 const eh=editRes[m.id]?.[0]??(real?.[0]??"");
                 const ea=editRes[m.id]?.[1]??(real?.[1]??"");
                 return(
-                  <div key={m.id} style={{background:real?"rgba(6,214,160,0.04)":"rgba(255,255,255,0.03)",border:`1px solid ${real?"rgba(6,214,160,0.18)":"rgba(255,255,255,0.07)"}`,borderRadius:10,padding:"9px 12px",minWidth:0}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:7,gap:6}}>
-                      <span style={{fontSize:10,color:"rgba(255,255,255,0.28)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>#{m.id} · Gr.{m.group} · {m.date.slice(5).replace("-","/")} · {m.venue}</span>
+                  <div key={m.id} style={{background:real?"rgba(6,214,160,0.04)":"rgba(255,255,255,0.03)",border:`1px solid ${real?"rgba(6,214,160,0.18)":"rgba(255,255,255,0.07)"}`,borderRadius:10,padding:"9px 12px"}}>
+                    {/* metadata */}
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:6}}>
+                      <span style={{fontSize:10,color:"rgba(255,255,255,0.28)"}}>#{m.id} · Gr.{m.group} · {m.date.slice(5).replace("-","/")} · {m.venue}</span>
                       {real
                         ?<span style={{fontSize:10,background:"rgba(6,214,160,0.18)",color:"#06D6A0",borderRadius:8,padding:"1px 7px",fontWeight:700,flexShrink:0}}>✓ Ok</span>
                         :<span style={{fontSize:10,color:"rgba(255,255,255,0.2)",flexShrink:0}}>Pendiente</span>
                       }
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",alignItems:"center",gap:6}}>
-                      <div style={{textAlign:"right",fontWeight:600,fontSize:11,lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</div>
-                      <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-                        <SInput v={eh===""?null:eh} onChange={v=>{const h=v===null?"":v,a=editRes[m.id]?.[1]??(real?.[1]??"");setEditRes(p=>({...p,[m.id]:[h,a]}));setResult(m.id,h,a);}}/>
-                        <span style={{color:"rgba(255,255,255,0.22)",fontFamily:"'Bebas Neue'",fontSize:16}}>:</span>
-                        <SInput v={ea===""?null:ea} onChange={v=>{const h=editRes[m.id]?.[0]??(real?.[0]??""),a=v===null?"":v;setEditRes(p=>({...p,[m.id]:[h,a]}));setResult(m.id,h,a);}}/>
-                      </div>
-                      <div style={{textAlign:"left",fontWeight:600,fontSize:11,lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</div>
+                    {/* home */}
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                      <span style={{fontWeight:700,fontSize:12}}>{m.home}</span>
+                      <SInput v={eh===""?null:eh} onChange={v=>{const h=v===null?"":v,a=editRes[m.id]?.[1]??(real?.[1]??"");setEditRes(p=>({...p,[m.id]:[h,a]}));setResult(m.id,h,a);}}/>
+                    </div>
+                    {/* divider */}
+                    <div style={{borderTop:"1px solid rgba(255,255,255,0.06)",margin:"4px 0"}}/>
+                    {/* away */}
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <span style={{fontWeight:700,fontSize:12}}>{m.away}</span>
+                      <SInput v={ea===""?null:ea} onChange={v=>{const h=editRes[m.id]?.[0]??(real?.[0]??""),a=v===null?"":v;setEditRes(p=>({...p,[m.id]:[h,a]}));setResult(m.id,h,a);}}/>
                     </div>
                   </div>
                 );
