@@ -127,8 +127,8 @@ function SInput({ v, onChange }) {
 function Banner({ tab }) {
   const b = BANNERS[tab];
   return (
-    <div style={{position:"relative",width:"100%",height:100,overflow:"hidden"}}>
-      <img src={b.url} alt={b.alt} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center 25%"}} onError={e=>{e.target.style.display="none";}} />
+    <div style={{position:"relative",width:"100%",height:100,overflow:"hidden",flexShrink:0}}>
+      <img src={b.url} alt={b.alt} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center 25%",display:"block"}} onError={e=>{e.target.style.display="none";}} />
       <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(7,11,24,0.2) 0%,rgba(7,11,24,0.72) 100%)"}} />
     </div>
   );
@@ -203,7 +203,7 @@ export default function App() {
   }
 
   return (
-    <div style={{minHeight:"100vh",background:"#070b18",fontFamily:"'Inter',sans-serif",color:"#e8eaf0",maxWidth:560,margin:"0 auto",fontSize:14}}>
+    <div style={{minHeight:"100vh",background:"#070b18",fontFamily:"'Inter',sans-serif",color:"#e8eaf0",maxWidth:560,margin:"0 auto",fontSize:14,overflowX:"hidden"}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
         *{box-sizing:border-box;}
