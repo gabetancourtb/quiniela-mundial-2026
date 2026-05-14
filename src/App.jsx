@@ -82,9 +82,9 @@ const GROUPS = ["A","B","C","D","E","F","G","H","I","J","K","L"];
 // Per-tab banner — each chosen to match the section's vibe
 const BANNERS = {
   dashboard: { url:"https://wallpapercave.com/wp/wp15655996.jpg",  alt:"FIFA World Cup 2026 logo" },
-  picks:     { url:"https://wallpapercave.com/wp/wp15010581.webp", alt:"FIFA World Cup 2026 host cities" },
-  results:   { url:"https://wallpapercave.com/wp/wp15010607.webp", alt:"FIFA World Cup 2026 stadium" },
-  analysis:  { url:"https://wallpapercave.com/wp/wp15655994.jpg",  alt:"FIFA World Cup 2026 logo clean" },
+  picks:     { url:"https://wallpapercave.com/wp/wp15655996.jpg",  alt:"FIFA World Cup 2026 logo" },
+  results:   { url:"https://wallpapercave.com/wp/wp15655996.jpg",  alt:"FIFA World Cup 2026 logo" },
+  analysis:  { url:"https://wallpapercave.com/wp/wp15655996.jpg",  alt:"FIFA World Cup 2026 logo" },
 };
 
 function calcPoints(pred, real) {
