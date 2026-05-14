@@ -119,7 +119,7 @@ function SBox({ v }) {
 function SInput({ v, onChange }) {
   return (
     <input type="number" min="0" max="20" value={v??""} onChange={e=>onChange(e.target.value===""?null:parseInt(e.target.value))}
-      style={{width:42,height:38,textAlign:"center",background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.25)",borderRadius:8,color:"#fff",fontFamily:"'Bebas Neue'",fontSize:22,outline:"none",WebkitAppearance:"none"}}
+      style={{width:48,height:40,textAlign:"center",background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.25)",borderRadius:8,color:"#fff",fontFamily:"'Bebas Neue'",fontSize:22,outline:"none",WebkitAppearance:"none",flexShrink:0}}
     />
   );
 }
@@ -203,9 +203,10 @@ export default function App() {
   }
 
   return (
-    <div style={{minHeight:"100vh",background:"#070b18",fontFamily:"'Inter',sans-serif",color:"#e8eaf0",maxWidth:560,margin:"0 auto",fontSize:14,overflowX:"hidden"}}>
+    <div style={{minHeight:"100vh",background:"#070b18",fontFamily:"'Inter',sans-serif",color:"#e8eaf0",width:"100%",maxWidth:"100vw",fontSize:14,overflowX:"hidden",boxSizing:"border-box"}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
+        html, body { overflow-x: hidden; width: 100%; margin: 0; padding: 0; }
         *{box-sizing:border-box;}
         ::-webkit-scrollbar{display:none;}
         input[type=number]::-webkit-inner-spin-button,
@@ -238,7 +239,7 @@ export default function App() {
       <Banner tab={tab} />
 
       {/* ── CONTENT ── */}
-      <div style={{padding:"12px 12px 72px",overflowX:"hidden"}}>
+      <div style={{padding:"10px 10px 72px",overflowX:"hidden",boxSizing:"border-box"}}>
 
         {/* ══ TABLA / DASHBOARD ══ */}
         {tab==="dashboard"&&(
