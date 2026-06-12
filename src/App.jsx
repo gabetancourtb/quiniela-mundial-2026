@@ -1,5 +1,19 @@
 import React from "react";
 import { useState, useEffect } from "react";
+import { initializeApp } from "firebase/app";
+import { getFirestore, doc, onSnapshot, setDoc } from "firebase/firestore";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDmGCrf4DUxawVWjhWY68JlmeI8_HDMF94",
+  authDomain: "quiniela-mundial-2026-54a3e.firebaseapp.com",
+  projectId: "quiniela-mundial-2026-54a3e",
+  storageBucket: "quiniela-mundial-2026-54a3e.firebasestorage.app",
+  messagingSenderId: "883630091704",
+  appId: "1:883630091704:web:8fec6886785cde21f2334d"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 const MATCHES = [
   { id:1,  date:"2026-06-11", venue:"Cd. México",    group:"A", home:"MEXICO",          away:"SUDAFRICA" },
@@ -111,6 +125,7 @@ const REAL_PARTICIPANTS = [
   {id:29,name:"Cristhian Dos Reis",color:"#FFC078",picks:{1:[2,0],2:[1,1],3:[2,1],4:[1,0],5:[0,2],6:[2,1],7:[1,2],8:[1,2],9:[4,0],10:[2,2],11:[1,1],12:[1,0],13:[3,0],14:[2,1],15:[0,2],16:[1,0],17:[2,0],18:[0,2],19:[3,1],20:[2,0],21:[3,0],22:[1,0],23:[1,1],24:[0,2],25:[2,0],26:[1,0],27:[3,1],28:[2,1],29:[2,0],30:[0,1],31:[5,0],32:[1,1],33:[2,1],34:[2,1],35:[2,1],36:[0,2],37:[3,0],38:[2,0],39:[3,1],40:[0,2],41:[2,0],42:[3,1],43:[1,1],44:[1,2],45:[3,1],46:[2,1],47:[0,2],48:[2,0],49:[1,1],50:[2,1],51:[0,2],52:[2,0],53:[1,2],54:[1,2],55:[0,2],56:[1,1],57:[2,1],58:[0,3],59:[1,2],60:[1,0],61:[1,2],62:[2,0],63:[1,1],64:[1,1],65:[2,1],66:[0,3],67:[0,3],68:[2,1],69:[1,2],70:[1,0],71:[1,2],72:[1,4]}},
   {id:30,name:"Milano Reyes",color:"#E599F7",picks:{1:[2,0],2:[1,0],3:[2,0],4:[1,1],5:[1,3],6:[1,1],7:[0,2],8:[0,1],9:[4,0],10:[1,1],11:[0,2],12:[1,0],13:[3,0],14:[1,0],15:[0,2],16:[2,0],17:[2,0],18:[1,3],19:[2,1],20:[2,0],21:[3,0],22:[2,1],23:[1,1],24:[0,2],25:[2,1],26:[1,0],27:[2,0],28:[1,0],29:[2,0],30:[1,3],31:[3,0],32:[1,1],33:[2,0],34:[2,0],35:[3,0],36:[0,2],37:[2,0],38:[1,0],39:[1,0],40:[1,2],41:[1,0],42:[2,0],43:[2,1],44:[0,2],45:[2,0],46:[1,0],47:[0,3],48:[2,0],49:[1,0],50:[2,0],51:[1,2],52:[2,0],53:[1,1],54:[1,2],55:[0,3],56:[0,2],57:[2,1],58:[0,1],59:[0,2],60:[1,0],61:[1,2],62:[1,0],63:[1,0],64:[0,2],65:[1,1],66:[0,1],67:[0,3],68:[1,0],69:[1,2],70:[1,0],71:[0,2],72:[0,2]}},
   {id:31,name:"Lennon Reyes",color:"#94D82D",picks:{1:[1,0],2:[1,0],3:[1,0],4:[0,0],5:[0,3],6:[1,0],7:[0,4],8:[0,1],9:[6,0],10:[2,1],11:[0,2],12:[2,1],13:[5,0],14:[2,0],15:[0,2],16:[2,1],17:[3,0],18:[1,4],19:[2,0],20:[3,0],21:[3,0],22:[3,1],23:[1,0],24:[0,2],25:[1,0],26:[3,1],27:[2,0],28:[1,1],29:[2,0],30:[1,1],31:[4,0],32:[1,1],33:[2,0],34:[2,0],35:[2,0],36:[1,2],37:[2,0],38:[3,0],39:[2,0],40:[0,1],41:[2,0],42:[4,0],43:[2,1],44:[0,1],45:[4,0],46:[3,0],47:[0,3],48:[2,1],49:[1,1],50:[2,0],51:[1,3],52:[4,0],53:[1,2],54:[0,1],55:[0,3],56:[0,1],57:[3,1],58:[0,2],59:[0,1],60:[2,1],61:[1,2],62:[2,0],63:[0,0],64:[1,2],65:[2,0],66:[0,3],67:[0,3],68:[2,0],69:[1,2],70:[0,1],71:[0,2],72:[0,4]}},
+  {id:32,name:"Rafael Perez",color:"#20C997",picks:{1:[2,0],2:[2,1],3:[3,1],4:[1,1],5:[0,2],6:[2,1],7:[1,2],8:[1,2],9:[3,0],10:[2,1],11:[1,1],12:[2,0],13:[3,0],14:[2,1],15:[1,3],16:[2,0],17:[1,0],18:[0,1],19:[2,0],20:[2,0],21:[3,0],22:[1,1],23:[2,1],24:[1,2],25:[2,1],26:[1,0],27:[1,0],28:[2,1],29:[2,1],30:[1,3],31:[3,0],32:[1,1],33:[2,1],34:[2,0],35:[2,0],36:[0,0],37:[2,0],38:[2,0],39:[3,1],40:[1,1],41:[2,0],42:[2,0],43:[1,1],44:[0,0],45:[2,0],46:[2,1],47:[1,3],48:[2,0],49:[2,2],50:[0,0],51:[0,3],52:[3,0],53:[0,2],54:[1,1],55:[1,2],56:[1,2],57:[1,0],58:[0,2],59:[2,1],60:[1,0],61:[2,2],62:[1,0],63:[0,0],64:[2,2],65:[1,1],66:[0,2],67:[0,2],68:[2,0],69:[2,3],70:[1,1],71:[0,1],72:[1,3]}},
 ];
 
 function calcPoints(pred, real) {
@@ -196,24 +211,19 @@ function PinModal({ onSuccess, onCancel }) {
 export default function App() {
   const [tab,setTab]         = useState("dashboard");
   const [parts]              = useState(REAL_PARTICIPANTS);
-  // Hardcoded results — updated after each day's matches
-  const HARDCODED_RESULTS = {
-    1:[2,0],  // México 2-0 Sudáfrica
-    2:[2,1],  // Corea del Sur 2-1 Chequia
-  };
+  const [results,setResults] = useState({});
+  const [fbLoading,setFbLoading] = useState(true);
 
-  const [results,setResults] = useState(()=>{
-    try {
-      const s=localStorage.getItem("quiniela_results_2026");
-      const stored = s ? JSON.parse(s) : {};
-      // Merge hardcoded with any locally stored, hardcoded takes priority
-      return { ...stored, ...HARDCODED_RESULTS };
-    } catch { return HARDCODED_RESULTS; }
-  });
-
+  // Firebase real-time listener — syncs results across all devices
   useEffect(()=>{
-    try { localStorage.setItem("quiniela_results_2026", JSON.stringify(results)); } catch{}
-  }, [results]);
+    const ref = doc(db, "quiniela", "results");
+    const unsub = onSnapshot(ref, (snap)=>{
+      if (snap.exists()) setResults(snap.data());
+      else setResults({});
+      setFbLoading(false);
+    }, ()=>{ setFbLoading(false); });
+    return ()=>unsub();
+  }, []);
   const [fg,setFg]           = useState("ALL");
   const [fd,setFd]           = useState("ALL"); // date filter for picks
   const [activeP,setActiveP] = useState(0);
@@ -249,8 +259,15 @@ export default function App() {
   const lastPlayedDate = playedDates.length>0 ? playedDates[playedDates.length-1] : null;
 
   function setResult(id,h,a){
-    if(h!==""&&h!==null&&a!==""&&a!==null) setResults(prev=>({...prev,[id]:[parseInt(h),parseInt(a)]}));
-    else setResults(prev=>{const n={...prev};delete n[id];return n;});
+    const ref = doc(db, "quiniela", "results");
+    let updated;
+    if(h!==""&&h!==null&&a!==""&&a!==null){
+      updated = { ...results, [id]:[parseInt(h),parseInt(a)] };
+    } else {
+      updated = { ...results };
+      delete updated[id];
+    }
+    setDoc(ref, updated);
   }
 
   const NAV=[{id:"dashboard",icon:"📊",label:"Tabla"},{id:"picks",icon:"🔒",label:"Picks"},{id:"results",icon:"⚽",label:"Resultados"},{id:"analysis",icon:"📈",label:"Análisis"}];
@@ -481,7 +498,7 @@ export default function App() {
               </span>
               {canEdit?(
                 <div style={{display:"flex",gap:6,flexShrink:0}}>
-                  <button onClick={()=>{if(window.confirm("¿Borrar todos los resultados?")){ setResults({}); setEditRes({}); }}} style={{background:"rgba(255,77,109,0.12)",border:"1px solid rgba(255,77,109,0.25)",borderRadius:8,padding:"4px 10px",fontSize:11,color:"rgba(255,77,109,0.8)",fontWeight:600}}>🗑</button>
+                  <button onClick={()=>{if(window.confirm("¿Borrar todos los resultados?")){ setDoc(doc(db,"quiniela","results"),{}); setEditRes({}); }}} style={{background:"rgba(255,77,109,0.12)",border:"1px solid rgba(255,77,109,0.25)",borderRadius:8,padding:"4px 10px",fontSize:11,color:"rgba(255,77,109,0.8)",fontWeight:600}}>🗑</button>
                   <button onClick={()=>setCanEdit(false)} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,padding:"4px 10px",fontSize:11,color:"rgba(255,255,255,0.5)",fontWeight:600}}>🔒 Cerrar</button>
                 </div>
               ):(
