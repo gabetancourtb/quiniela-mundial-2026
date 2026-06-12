@@ -196,8 +196,19 @@ function PinModal({ onSuccess, onCancel }) {
 export default function App() {
   const [tab,setTab]         = useState("dashboard");
   const [parts]              = useState(REAL_PARTICIPANTS);
+  // Hardcoded results — updated after each day's matches
+  const HARDCODED_RESULTS = {
+    1:[2,0],  // México 2-0 Sudáfrica
+    2:[2,1],  // Corea del Sur 2-1 Chequia
+  };
+
   const [results,setResults] = useState(()=>{
-    try { const s=localStorage.getItem("quiniela_results_2026"); return s?JSON.parse(s):{}; } catch{ return {}; }
+    try {
+      const s=localStorage.getItem("quiniela_results_2026");
+      const stored = s ? JSON.parse(s) : {};
+      // Merge hardcoded with any locally stored, hardcoded takes priority
+      return { ...stored, ...HARDCODED_RESULTS };
+    } catch { return HARDCODED_RESULTS; }
   });
 
   useEffect(()=>{
