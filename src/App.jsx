@@ -1013,7 +1013,8 @@ function PronosticosTab({ participant, results, picks, onPickChange, onConfirmPi
         const homeTeam = partResolved[m.id]?.home || resolvedTeams[m.id]?.home || m.home;
         const awayTeam = partResolved[m.id]?.away || resolvedTeams[m.id]?.away || m.away;
         const partResolvedWithMatch = { ...partResolved, [m.id]: { home: homeTeam, away: awayTeam } };
-        const rootingTeam = myPicks[m.id]?.side === "home" ? homeTeam : myPicks[m.id]?.side === "away" ? awayTeam : null;
+        // Use recursive chain lookup so R16+ shows the team they backed from R32
+        const rootingTeam = getRootingTeam(participant.id, m.id, myPicks, partResolvedWithMatch, results);
         return (
           <MatchCard
             key={m.id}
