@@ -999,12 +999,12 @@ function PronosticosTab({ participant, results, picks, onPickChange, onConfirmPi
         // chain — never from actual real-world results — so their own bracket
         // view stays internally consistent with what they picked, even after
         // real results diverge from their prediction.
-        const homeTeam = resolveParticipantSlot(participant.id, m.id, "home", myPicks, teams) || m.home;
-        const awayTeam = resolveParticipantSlot(participant.id, m.id, "away", myPicks, teams) || m.away;
+        const homeTeam = resolveParticipantSlot(participant.id, m.id, "home", picks, teams) || m.home;
+        const awayTeam = resolveParticipantSlot(participant.id, m.id, "away", picks, teams) || m.away;
         const partResolvedWithMatch = { [m.id]: { home: homeTeam, away: awayTeam } };
         // Trace the participant's own pick chain (independent of actual results)
         // to find which team, if any, they're definitively rooting for here.
-        const rootingTeam = getRootingTeam(participant.id, m.id, myPicks, teams);
+        const rootingTeam = getRootingTeam(participant.id, m.id, picks, teams);
         return (
           <MatchCard
             key={m.id}
