@@ -1026,7 +1026,7 @@ function PronosticosTab({ participant, results, picks, onPickChange, onConfirmPi
 }
 
 // ─── PICKS TAB (transparency view) ───────────────────────────────────────────
-function PicksTab({ participants, results, picks, resolvedTeams }) {
+function PicksTab({ participants, results, picks, resolvedTeams, teams }) {
   const [round, setRound]  = useState("r32");
   const [viewBy, setViewBy] = useState("match"); // "match" | "person"
   const approved = participants.filter(p => p.status === "approved");
@@ -1089,6 +1089,11 @@ function PicksTab({ participants, results, picks, resolvedTeams }) {
               {participantPicks.map(p => {
                 const hasPick = p.pick?.score?.[0] != null;
                 const pts = p.pts?.total ?? null;
+                // Show the team from THIS participant's own pick chain, not the
+                // actual real-world winner — so the arrow reflects what they
+                // predicted even if the real outcome later diverged from it.
+                const rootingTeam = getRootingTeam(p.id, m.id, picks, teams);
+                const arrowTeam = rootingTeam || (p.pick?.side === "home" ? tHome : tAway);
                 return (
                   <div key={p.id} style={{
                     display:"flex", alignItems:"center", gap:4,
@@ -1102,7 +1107,7 @@ function PicksTab({ participants, results, picks, resolvedTeams }) {
                       <>
                         <span style={{ fontSize:11, fontWeight:700 }}>{p.pick.score[0]}–{p.pick.score[1]}</span>
                         <span style={{ fontSize:9, color:C.amber }}>
-                          {p.pick.side === "home" ? `↑${tHome.split(" ")[0]}` : `↑${tAway.split(" ")[0]}`}
+                          {arrowTeam ? `↑${arrowTeam.split(" ")[0]}` : ""}
                         </span>
                       </>
                     ) : (
@@ -1147,6 +1152,11 @@ function PicksTab({ participants, results, picks, resolvedTeams }) {
               const tHome = resolvedTeams?.[m.id]?.home || m.home;
               const tAway = resolvedTeams?.[m.id]?.away || m.away;
               const pts = pick && res ? calcMatchPts(pick.score, pick.side, res) : null;
+              // Use this participant's own pick chain rather than the actual
+              // real-world winner, so it reflects what they predicted even if
+              // the real outcome later diverged from it.
+              const rootingTeam = pick?.side ? getRootingTeam(p.id, m.id, picks, teams) : null;
+              const arrowTeam = rootingTeam || (pick?.side === "home" ? tHome : tAway);
               return (
                 <div key={m.id} style={{ padding:"8px 14px", borderBottom:`1px solid ${C.border}`,
                   display:"flex", alignItems:"center", gap:8 }}>
@@ -1156,7 +1166,7 @@ function PicksTab({ participants, results, picks, resolvedTeams }) {
                     </div>
                     {pick?.side && (
                       <div style={{ fontSize:10, color:C.amber, marginTop:2 }}>
-                        ↑ {pick.side === "home" ? tHome : tAway}
+                        ↑ {arrowTeam}
                       </div>
                     )}
                   </div>
@@ -2030,7 +2040,7 @@ export default function App() {
         )}
 
         {tab === "picks" && (
-          <PicksTab participants={participants} results={results} picks={picks} resolvedTeams={resolvedTeams} />
+          <PicksTab participants={participants} results={results} picks={picks} resolvedTeams={resolvedTeams} teams={teams} />
         )}
 
         {tab === "analisis" && (
