@@ -995,15 +995,13 @@ function PronosticosTab({ participant, results, picks, onPickChange, onConfirmPi
       </div>
 
       {activeRound?.matches.map(m => {
-        // Use participant-specific resolved teams so their R32 picks show as team names in R16+
-        const partResolved = resolveTeamsForParticipant(
-          Object.fromEntries(ALL_MATCHES.map(mx => [mx.id, resolvedTeams[mx.id]])),
-          results,
-          myPicks
-        );
-        const homeTeam = partResolved[m.id]?.home || resolvedTeams[m.id]?.home || m.home;
-        const awayTeam = partResolved[m.id]?.away || resolvedTeams[m.id]?.away || m.away;
-        const partResolvedWithMatch = { ...partResolved, [m.id]: { home: homeTeam, away: awayTeam } };
+        // Resolve BOTH team-name slots purely from this participant's own pick
+        // chain — never from actual real-world results — so their own bracket
+        // view stays internally consistent with what they picked, even after
+        // real results diverge from their prediction.
+        const homeTeam = resolveParticipantSlot(participant.id, m.id, "home", myPicks, teams) || m.home;
+        const awayTeam = resolveParticipantSlot(participant.id, m.id, "away", myPicks, teams) || m.away;
+        const partResolvedWithMatch = { [m.id]: { home: homeTeam, away: awayTeam } };
         // Trace the participant's own pick chain (independent of actual results)
         // to find which team, if any, they're definitively rooting for here.
         const rootingTeam = getRootingTeam(participant.id, m.id, myPicks, teams);
