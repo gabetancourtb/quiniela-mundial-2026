@@ -132,6 +132,10 @@ const ALL_MATCHES = KO_ROUNDS.flatMap(r =>
   r.matches.map(m => ({ ...m, roundId: r.id, roundLabel: r.label, roundPts: r.pts }))
 );
 
+// Quick lookup of the static match object (with original placeholder
+// home/away labels like "W-k1") by match id.
+const MATCH_BY_ID = Object.fromEntries(ALL_MATCHES.map(m => [m.id, m]));
+
 // Maps each R32/R16/QF/SF match winner to the next round slot it fills
 // { winnersMatchId: { nextMatchId, slot:"home"|"away" } }
 const WINNER_FLOWS = {
@@ -285,75 +289,62 @@ function getBackedTeam(participantId, matchId, picks, resolvedTeams) {
   return pick.side === "home" ? teams.home : teams.away;
 }
 
-// Recursively trace which team a participant is rooting for in a given match,
-// based purely on their pick chain (side selections), regardless of results.
-// Works even before any results are entered.
-function getRootingTeam(participantId, matchId, picks, resolvedTeams, results, depth=0) {
-  if (depth > 5) return null; // safety limit
+// Resolve the team name occupying a specific slot ("home"/"away") of a match,
+// following ONLY the single chain implied by the participant's own picks —
+// never the "other" feeder. `teams` here is the plain admin-set static team
+// override map (e.g. { k1: { home:"...", away:"..." } }), NOT a
+// results-derived resolution — this keeps the trace fully independent of
+// actual match outcomes, so a participant's projected bracket stays intact
+// even when real results diverge from what they predicted.
+function resolveParticipantSlot(participantId, matchId, side, picks, teams, depth = 0) {
+  if (depth > 8) return null; // safety limit against malformed data
 
-  const teams = resolvedTeams[matchId] || {};
+  const staticMatch = MATCH_BY_ID[matchId];
+  if (!staticMatch) return null;
 
-  // If participant has a direct side pick for this match, use it
-  const directPick = picks[participantId]?.[matchId];
-  if (directPick?.side) {
-    const team = directPick.side === "home" ? teams.home : teams.away;
-    if (team && !team.startsWith("W-") && !team.startsWith("L-")) return team;
+  const home = teams?.[matchId]?.home || staticMatch.home;
+  const away = teams?.[matchId]?.away || staticMatch.away;
+  const label = side === "home" ? home : away;
+
+  // Already a real team name (not a "W-"/"L-" placeholder) — done.
+  if (label && !label.startsWith("W-") && !label.startsWith("L-")) return label;
+
+  // Placeholder — find the ONE feeder match that fills exactly this slot
+  // (never the other slot's feeder) and resolve it recursively.
+  const winnerFeederId = Object.keys(WINNER_FLOWS).find(
+    fid => WINNER_FLOWS[fid] === matchId && WINNER_SLOT[fid] === side
+  );
+  if (winnerFeederId) {
+    const feederPick = picks[participantId]?.[winnerFeederId];
+    if (!feederPick?.side) return null; // participant hasn't decided the feeder match yet
+    return resolveParticipantSlot(participantId, winnerFeederId, feederPick.side, picks, teams, depth + 1);
   }
 
-  // Find feeder matches (matches whose winner flows into this match)
-  const feeders = Object.entries(WINNER_FLOWS)
-    .filter(([, next]) => next === matchId)
-    .map(([mid]) => mid);
-
-  for (const feederId of feeders) {
-    const feederPick = picks[participantId]?.[feederId];
-    if (!feederPick?.side) {
-      // No direct pick for feeder — recurse into feeder's own feeders
-      const candidate = getRootingTeam(participantId, feederId, picks, resolvedTeams, results, depth + 1);
-      if (candidate) {
-        // Check if this candidate is actually playing in the current match
-        if (teams.home && teams.home === candidate) return candidate;
-        if (teams.away && teams.away === candidate) return candidate;
-        // Team name not yet resolved — return candidate so it can be shown as pending
-        if (!teams.home || teams.home.startsWith("W-") || teams.away.startsWith("W-")) return candidate;
-      }
-      continue;
-    }
-
-    // Participant picked a side in the feeder match — get the team they picked
-    const feederTeams = resolvedTeams[feederId] || {};
-    const pickedTeam = feederPick.side === "home" ? feederTeams.home : feederTeams.away;
-
-    if (!pickedTeam || pickedTeam.startsWith("W-") || pickedTeam.startsWith("L-")) {
-      // Team name not resolved yet — recurse into feeder's feeders to find the real team name
-      const candidate = getRootingTeam(participantId, feederId, picks, resolvedTeams, results, depth + 1);
-      if (candidate) return candidate;
-      continue;
-    }
-
-    // We have a real team name — check if it's playing in current match
-    if (pickedTeam === teams.home || pickedTeam === teams.away) return pickedTeam;
-    // Team name resolved but doesn't match current match yet (R16+ before results)
-    // Return it anyway so the card can show "rooting for X"
-    if (teams.home?.startsWith("W-") || teams.away?.startsWith("W-") ||
-        !teams.home || !teams.away) return pickedTeam;
-  }
-
-  // Also check loser flows (for third place match)
-  const loserFeeders = Object.entries(LOSER_FLOWS)
-    .filter(([, v]) => v.nextMatchId === matchId)
-    .map(([mid]) => mid);
-
-  for (const feederId of loserFeeders) {
-    const feederPick = picks[participantId]?.[feederId];
-    if (!feederPick?.side) continue;
-    const feederTeams = resolvedTeams[feederId] || {};
-    // For third place: the team they did NOT pick to win goes to third place
-    const loserTeam = feederPick.side === "home" ? feederTeams.away : feederTeams.home;
-    if (loserTeam && !loserTeam.startsWith("W-") && !loserTeam.startsWith("L-")) return loserTeam;
+  // Third-place match slots are filled by SF LOSERS, not winners.
+  const loserFeederId = Object.keys(LOSER_FLOWS).find(
+    fid => LOSER_FLOWS[fid].nextMatchId === matchId && LOSER_FLOWS[fid].slot === side
+  );
+  if (loserFeederId) {
+    const feederPick = picks[participantId]?.[loserFeederId];
+    if (!feederPick?.side) return null;
+    // The loser is whichever side they did NOT pick to win
+    const loserSide = feederPick.side === "home" ? "away" : "home";
+    return resolveParticipantSlot(participantId, loserFeederId, loserSide, picks, teams, depth + 1);
   }
 
   return null;
+}
+
+// Determine which team a participant is rooting for in a given match, based
+// purely on their own pick chain (side selections) for THAT match — then
+// traces backward through the exact slot (home/away) their pick corresponds
+// to, round by round, all the way back to a resolved team name. This is
+// independent of actual results, so it stays correct even after real
+// outcomes diverge from what the participant predicted.
+function getRootingTeam(participantId, matchId, picks, teams) {
+  const directPick = picks[participantId]?.[matchId];
+  if (!directPick?.side) return null; // nothing definitive without a pick on this match
+  return resolveParticipantSlot(participantId, matchId, directPick.side, picks, teams);
 }
 
 // ─── SCORING ──────────────────────────────────────────────────────────────────
@@ -927,7 +918,7 @@ function TablaTab({ participants, results, picks, resolvedTeams }) {
 }
 
 // ─── PRONÓSTICOS TAB (personal pick entry) ────────────────────────────────────
-function PronosticosTab({ participant, results, picks, onPickChange, onConfirmPick, resolvedTeams }) {
+function PronosticosTab({ participant, results, picks, onPickChange, onConfirmPick, resolvedTeams, teams }) {
   const [round, setRound] = useState("r32");
   const activeRound = KO_ROUNDS.find(r => r.id === round);
   const myPicks = picks[participant.id] || {};
@@ -1013,8 +1004,9 @@ function PronosticosTab({ participant, results, picks, onPickChange, onConfirmPi
         const homeTeam = partResolved[m.id]?.home || resolvedTeams[m.id]?.home || m.home;
         const awayTeam = partResolved[m.id]?.away || resolvedTeams[m.id]?.away || m.away;
         const partResolvedWithMatch = { ...partResolved, [m.id]: { home: homeTeam, away: awayTeam } };
-        // Use recursive chain lookup so R16+ shows the team they backed from R32
-        const rootingTeam = getRootingTeam(participant.id, m.id, myPicks, partResolvedWithMatch, results);
+        // Trace the participant's own pick chain (independent of actual results)
+        // to find which team, if any, they're definitively rooting for here.
+        const rootingTeam = getRootingTeam(participant.id, m.id, myPicks, teams);
         return (
           <MatchCard
             key={m.id}
@@ -2033,7 +2025,7 @@ export default function App() {
               }}>Cerrar sesión</button>
             </div>
             <PronosticosTab participant={currentUser} results={results} picks={picks}
-              onPickChange={doPickChange} onConfirmPick={doConfirmPick} resolvedTeams={resolvedTeams} />
+              onPickChange={doPickChange} onConfirmPick={doConfirmPick} resolvedTeams={resolvedTeams} teams={teams} />
           </div>
         )}
 
