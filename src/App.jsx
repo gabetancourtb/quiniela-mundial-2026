@@ -351,32 +351,75 @@ function getRootingTeam(participantId, matchId, picks, teams) {
 // pick = [homeScore, awayScore], pickedSide = "home"|"away"
 // result = { score:[h,a], winner:"home"|"away"|"draw" }
 // winner is the team that actually advanced (could be home or away even after draw+pens)
-function calcMatchPts(pick, pickedSide, result) {
+//
+// ctx = { matchId, participantId, picks, teams, resolvedTeams } — resolvedTeams
+// here must be the GLOBAL, actual-results-based team map (resolveTeams), not a
+// participant-projected one. This context lets us check team IDENTITY, not
+// just home/away slot position:
+//   - 2pts (advance): only if the SPECIFIC team the participant predicted to
+//     advance in this match is the team that actually advanced in reality —
+//     a coincidental slot match (e.g. picking "away" when your real team was
+//     already eliminated earlier) no longer counts.
+//   - 3/5pts (outcome/exact): only if BOTH real teams playing this match are
+//     the same two teams the participant predicted would be playing here —
+//     otherwise their guessed score doesn't correspond to a matchup that
+//     actually happened.
+// For R32 this all collapses back to the original simple behavior, since
+// there's no earlier round to diverge from — team identity there is fixed.
+function calcMatchPts(pick, pickedSide, result, ctx) {
   if (!pick || !result) return null;
   const pts = { adv: 0, outcome: 0, exact: 0, total: 0, breakdown: [] };
 
-  // 2 pts: did the picked team advance? (always, independent of score)
+  const { matchId, participantId, picks, teams, resolvedTeams } = ctx || {};
+  const haveContext = !!(matchId && participantId && picks && resolvedTeams);
+
+  // 2 pts: the specific team they predicted to advance in THIS match must be
+  // the team that actually advanced in reality.
   if (pickedSide && result.winner && result.winner !== "draw") {
-    if (pickedSide === result.winner) {
+    if (haveContext) {
+      const predictedTeam = getRootingTeam(participantId, matchId, picks, teams);
+      const actualWinnerTeam = result.winner === "home"
+        ? resolvedTeams[matchId]?.home
+        : resolvedTeams[matchId]?.away;
+      if (predictedTeam && actualWinnerTeam && predictedTeam === actualWinnerTeam) {
+        pts.adv = 2;
+        pts.breakdown.push("⬆ 2pts avance");
+      }
+    } else if (pickedSide === result.winner) {
+      // Fallback if context wasn't supplied — shouldn't normally happen.
       pts.adv = 2;
       pts.breakdown.push("⬆ 2pts avance");
     }
   }
 
+  // Outcome / exact require BOTH real teams playing this match to match what
+  // the participant predicted would be playing here.
+  let bothTeamsMatch = true;
+  if (haveContext) {
+    const actualHome = resolvedTeams[matchId]?.home;
+    const actualAway = resolvedTeams[matchId]?.away;
+    const predictedHome = resolveParticipantSlot(participantId, matchId, "home", picks, teams);
+    const predictedAway = resolveParticipantSlot(participantId, matchId, "away", picks, teams);
+    bothTeamsMatch = !!predictedHome && !!predictedAway &&
+      predictedHome === actualHome && predictedAway === actualAway;
+  }
+
   // Outcome / exact are mutually exclusive — exact scoreline implies correct
   // outcome, so it replaces the 3pt bonus rather than stacking with it.
   // Max per match: 2 (adv) + 5 (exact) = 7, or 2 (adv) + 3 (outcome) = 5
-  const [ph, pa] = pick;
-  const [rh, ra] = result.score;
-  const predOutcome = ph > pa ? "home" : ph < pa ? "away" : "draw";
-  const isExact = ph === rh && pa === ra;
+  if (bothTeamsMatch) {
+    const [ph, pa] = pick;
+    const [rh, ra] = result.score;
+    const predOutcome = ph > pa ? "home" : ph < pa ? "away" : "draw";
+    const isExact = ph === rh && pa === ra;
 
-  if (isExact) {
-    pts.exact = 5;
-    pts.breakdown.push("+5pts exacto");
-  } else if (predOutcome === result.outcome) {
-    pts.outcome = 3;
-    pts.breakdown.push("+3pts resultado");
+    if (isExact) {
+      pts.exact = 5;
+      pts.breakdown.push("+5pts exacto");
+    } else if (predOutcome === result.outcome) {
+      pts.outcome = 3;
+      pts.breakdown.push("+3pts resultado");
+    }
   }
 
   pts.total = pts.adv + pts.outcome + pts.exact;
@@ -612,7 +655,7 @@ function RegisterModal({ onDone, onCancel, existingNames }) {
 }
 
 // ─── MATCH CARD ───────────────────────────────────────────────────────────────
-function MatchCard({ match, result, pick, onPickChange, canPick, resolvedTeams, rootingTeam, onConfirm, onUnlock, isAdminView }) {
+function MatchCard({ match, result, pick, onPickChange, canPick, resolvedTeams, rootingTeam, onConfirm, onUnlock, isAdminView, participantId, allPicks, teams, actualResolvedTeams }) {
   const teamHome = resolvedTeams?.[match.id]?.home || match.home;
   const teamAway = resolvedTeams?.[match.id]?.away || match.away;
   // Is one of the teams in this match the team this participant is rooting for?
@@ -628,7 +671,9 @@ function MatchCard({ match, result, pick, onPickChange, canPick, resolvedTeams, 
   // Editable only if: participant can pick, pick isn't confirmed yet
   const editable = canPick && !isConfirmed;
 
-  const ptsObj   = hasPick && result ? calcMatchPts(pick.score, pick.side, result) : null;
+  const ptsObj   = hasPick && result
+    ? calcMatchPts(pick.score, pick.side, result, { matchId: match.id, participantId, picks: allPicks, teams, resolvedTeams: actualResolvedTeams })
+    : null;
   const totalPts = ptsObj?.total ?? null;
 
   const isRootingMatch = (homeIsRooting || awayIsRooting) && !result;
@@ -776,7 +821,7 @@ function MatchCard({ match, result, pick, onPickChange, canPick, resolvedTeams, 
 }
 
 // ─── TABLA TAB ────────────────────────────────────────────────────────────────
-function TablaTab({ participants, results, picks, resolvedTeams }) {
+function TablaTab({ participants, results, picks, resolvedTeams, teams }) {
   const approved = participants.filter(p => p.status === "approved");
 
   const scored = approved.map(p => {
@@ -786,7 +831,7 @@ function TablaTab({ participants, results, picks, resolvedTeams }) {
       const res  = results[m.id];
       if (!pick || !res) return;
       played++;
-      const pts = calcMatchPts(pick.score, pick.side, res);
+      const pts = calcMatchPts(pick.score, pick.side, res, { matchId: m.id, participantId: p.id, picks, teams, resolvedTeams });
       if (!pts) return;
       total   += pts.total;
       adv     += pts.adv;
@@ -929,7 +974,7 @@ function PronosticosTab({ participant, results, picks, onPickChange, onConfirmPi
     const res  = results[m.id];
     if (pick && res) {
       played++;
-      const pts = calcMatchPts(pick.score, pick.side, res);
+      const pts = calcMatchPts(pick.score, pick.side, res, { matchId: m.id, participantId: participant.id, picks, teams, resolvedTeams });
       if (pts) total += pts.total;
     }
   });
@@ -1016,6 +1061,10 @@ function PronosticosTab({ participant, results, picks, onPickChange, onConfirmPi
             resolvedTeams={partResolvedWithMatch}
             rootingTeam={rootingTeam}
             onConfirm={() => onConfirmPick(participant.id, m.id)}
+            participantId={participant.id}
+            allPicks={picks}
+            teams={teams}
+            actualResolvedTeams={resolvedTeams}
           />
         );
       })}
@@ -1066,7 +1115,7 @@ function PicksTab({ participants, results, picks, resolvedTeams, teams }) {
           ...p,
           pick: picks[p.id]?.[m.id],
           pts: picks[p.id]?.[m.id] && res
-            ? calcMatchPts(picks[p.id][m.id].score, picks[p.id][m.id].side, res)
+            ? calcMatchPts(picks[p.id][m.id].score, picks[p.id][m.id].side, res, { matchId: m.id, participantId: p.id, picks, teams, resolvedTeams })
             : null,
         }));
         return (
@@ -1128,7 +1177,7 @@ function PicksTab({ participants, results, picks, resolvedTeams, teams }) {
           const pick = myPicks[m.id];
           const res  = results[m.id];
           if (pick && res) {
-            const pts = calcMatchPts(pick.score, pick.side, res);
+            const pts = calcMatchPts(pick.score, pick.side, res, { matchId: m.id, participantId: p.id, picks, teams, resolvedTeams });
             if (pts) roundTotal += pts.total;
           }
         });
@@ -1149,7 +1198,7 @@ function PicksTab({ participants, results, picks, resolvedTeams, teams }) {
               const hasPick = pick?.score?.[0] != null;
               const tHome = resolvedTeams?.[m.id]?.home || m.home;
               const tAway = resolvedTeams?.[m.id]?.away || m.away;
-              const pts = pick && res ? calcMatchPts(pick.score, pick.side, res) : null;
+              const pts = pick && res ? calcMatchPts(pick.score, pick.side, res, { matchId: m.id, participantId: p.id, picks, teams, resolvedTeams }) : null;
               // Use this participant's own pick chain rather than the actual
               // real-world winner, so it reflects what they predicted even if
               // the real outcome later diverged from it.
@@ -1191,7 +1240,7 @@ function PicksTab({ participants, results, picks, resolvedTeams, teams }) {
 }
 
 // ─── ANÁLISIS TAB ─────────────────────────────────────────────────────────────
-function AnalisisTab({ participants, results, picks, resolvedTeams }) {
+function AnalisisTab({ participants, results, picks, resolvedTeams, teams }) {
   const approved = participants.filter(p => p.status === "approved");
   const playedMatches = ALL_MATCHES.filter(m => results[m.id]);
 
@@ -1208,7 +1257,7 @@ function AnalisisTab({ participants, results, picks, resolvedTeams }) {
       const res  = results[m.id];
       if (!pick || !res) return;
       played++;
-      const pts = calcMatchPts(pick.score, pick.side, res);
+      const pts = calcMatchPts(pick.score, pick.side, res, { matchId: m.id, participantId: p.id, picks, teams, resolvedTeams });
       if (!pts) return;
       total     += pts.total;
       advPts    += pts.adv;
@@ -1230,7 +1279,7 @@ function AnalisisTab({ participants, results, picks, resolvedTeams }) {
     const sorted = approved.map(p => {
       const pick = picks[p.id]?.[m.id];
       const res  = results[m.id];
-      const pts  = pick && res ? calcMatchPts(pick.score, pick.side, res) : null;
+      const pts  = pick && res ? calcMatchPts(pick.score, pick.side, res, { matchId: m.id, participantId: p.id, picks, teams, resolvedTeams }) : null;
       return { ...p, pts: pts?.total ?? 0 };
     }).sort((a,b) => b.pts - a.pts);
     return { match: m, leader: sorted[0], top: sorted.slice(0,3) };
@@ -1447,7 +1496,7 @@ function AnalisisTab({ participants, results, picks, resolvedTeams }) {
 }
 
 // ─── ADMIN TAB ────────────────────────────────────────────────────────────────
-function AdminTab({ participants, results, teams, picks, onApprove, onReject, onDelete, onSetResult, onSetTeams, onResetPicks, onUnlockPick, onResetResults, onClearResult }) {
+function AdminTab({ participants, results, teams, resolvedTeams, picks, onApprove, onReject, onDelete, onSetResult, onSetTeams, onResetPicks, onUnlockPick, onResetResults, onClearResult }) {
   const [section, setSection] = useState("pending");
   const [round, setRound]     = useState("r32");
   const [editR, setEditR]     = useState({});   // { matchId: { score:[h,a], outcome, winner } }
@@ -1581,8 +1630,8 @@ function AdminTab({ participants, results, teams, picks, onApprove, onReject, on
           {activeRound?.matches.map(m => {
             const res     = results[m.id];
             const curr    = editR[m.id] || {};
-            const tHome   = teams?.[m.id]?.home || m.home;
-            const tAway   = teams?.[m.id]?.away || m.away;
+            const tHome   = teams?.[m.id]?.home || resolvedTeams?.[m.id]?.home || m.home;
+            const tAway   = teams?.[m.id]?.away || resolvedTeams?.[m.id]?.away || m.away;
             const sh      = curr.score?.[0] ?? res?.score?.[0] ?? null;
             const sa      = curr.score?.[1] ?? res?.score?.[1] ?? null;
             const winner  = curr.winner  ?? res?.winner  ?? null;
@@ -1749,8 +1798,8 @@ function AdminTab({ participants, results, teams, picks, onApprove, onReject, on
                 </div>
                 {confirmedInRound.map(m => {
                   const pick = userPicks[m.id];
-                  const tHome = teams?.[m.id]?.home || m.home;
-                  const tAway = teams?.[m.id]?.away || m.away;
+                  const tHome = teams?.[m.id]?.home || resolvedTeams?.[m.id]?.home || m.home;
+                  const tAway = teams?.[m.id]?.away || resolvedTeams?.[m.id]?.away || m.away;
                   return (
                     <div key={m.id} style={{ padding:"8px 12px", borderBottom:`1px solid ${C.border}`,
                       display:"flex", alignItems:"center", gap:8 }}>
@@ -1985,7 +2034,7 @@ export default function App() {
       <div style={{ padding:"12px 10px 80px" }}>
 
         {tab === "tabla" && (
-          <TablaTab participants={participants} results={results} picks={picks} resolvedTeams={resolvedTeams} />
+          <TablaTab participants={participants} results={results} picks={picks} resolvedTeams={resolvedTeams} teams={teams} />
         )}
 
         {tab === "pronosticos" && !currentUser && (
@@ -2042,7 +2091,7 @@ export default function App() {
         )}
 
         {tab === "analisis" && (
-          <AnalisisTab participants={participants} results={results} picks={picks} resolvedTeams={resolvedTeams} />
+          <AnalisisTab participants={participants} results={results} picks={picks} resolvedTeams={resolvedTeams} teams={teams} />
         )}
 
         {tab === "admin" && !isAdmin && (
@@ -2064,7 +2113,7 @@ export default function App() {
                 borderRadius:8, padding:"5px 12px", fontSize:11, color:C.slate,
               }}>Salir admin</button>
             </div>
-            <AdminTab participants={participants} results={results} teams={teams} picks={picks}
+            <AdminTab participants={participants} results={results} teams={teams} resolvedTeams={resolvedTeams} picks={picks}
               onApprove={doApprove} onReject={doReject} onDelete={doDelete}
               onSetResult={doSetResult} onSetTeams={doSetTeams} onResetPicks={doResetPicks}
               onUnlockPick={doUnlockPick} onResetResults={doResetResults} onClearResult={doClearResult} />
